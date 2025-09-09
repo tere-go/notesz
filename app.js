@@ -4,11 +4,30 @@ const supabase = require('./config/supabase');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Add error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Error:', err);
+  res.status(500).json({ error: err.message });
+});
+
 // OpenAI configuration
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 // Middleware for JSON parsing
 app.use(express.json());
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    env: {
+      hasSupabaseUrl: !!process.env.SUPABASE_URL,
+      hasSupabaseKey: !!process.env.SUPABASE_ANON_KEY,
+      hasOpenAIKey: !!process.env.OPENAI_API_KEY
+    }
+  });
+});
 
 // Serve CSS file
 app.get('/styles.css', (req, res) => {
@@ -25,6 +44,10 @@ app.get('/', (req, res) => {
 // API Routes for Notes
 app.get('/api/notes', async (req, res) => {
   try {
+    console.log('Fetching notes...');
+    console.log('Supabase URL:', process.env.SUPABASE_URL ? 'Set' : 'Not set');
+    console.log('Supabase Key:', process.env.SUPABASE_ANON_KEY ? 'Set' : 'Not set');
+    
     const { data, error } = await supabase
       .from('notes')
       .select('*')
@@ -770,9 +793,16 @@ app.get('/api/notes', async (req, res) => {
     `);
   } catch (error) {
     console.error('Error fetching notes:', error);
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint
+    });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: error.message,
+      details: error.details || 'Unknown error'
     });
   }
 });

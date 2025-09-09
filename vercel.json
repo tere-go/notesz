@@ -2,30 +2,14 @@
   "version": 2,
   "builds": [
     {
-      "src": "api/notes.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "api/generate-actions.js",
+      "src": "app.js",
       "use": "@vercel/node"
     }
   ],
   "routes": [
     {
-      "src": "/styles.css",
-      "dest": "/styles.css"
-    },
-    {
-      "src": "/api/notes/(.*)",
-      "dest": "/api/notes.js"
-    },
-    {
-      "src": "/api/generate-actions",
-      "dest": "/api/generate-actions.js"
-    },
-    {
       "src": "/(.*)",
-      "dest": "/api/notes.js"
+      "dest": "/app.js"
     }
   ]
 }
