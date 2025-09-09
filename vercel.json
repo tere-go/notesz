@@ -27,13 +27,5 @@
       "src": "/(.*)",
       "dest": "/api/notes.js"
     }
-  ],
-  "functions": {
-    "api/notes.js": {
-      "maxDuration": 30
-    },
-    "api/generate-actions.js": {
-      "maxDuration": 30
-    }
-  }
+  ]
 }
