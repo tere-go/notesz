@@ -10,8 +10,11 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 // Middleware for JSON parsing
 app.use(express.json());
 
-// Serve static files from public directory
-app.use(express.static('public'));
+// Serve CSS file
+app.get('/styles.css', (req, res) => {
+  res.sendFile(__dirname + '/styles.css');
+});
+
 
 // Redirect root to notes app
 app.get('/', (req, res) => {
