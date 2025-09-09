@@ -1,0 +1,39 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/notes.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/generate-actions.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/styles.css",
+      "dest": "/styles.css"
+    },
+    {
+      "src": "/api/notes/(.*)",
+      "dest": "/api/notes.js"
+    },
+    {
+      "src": "/api/generate-actions",
+      "dest": "/api/generate-actions.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/api/notes.js"
+    }
+  ],
+  "functions": {
+    "api/notes.js": {
+      "maxDuration": 30
+    },
+    "api/generate-actions.js": {
+      "maxDuration": 30
+    }
+  }
+}

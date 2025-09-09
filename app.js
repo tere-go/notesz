@@ -12,6 +12,7 @@ app.use(express.json());
 
 // Serve CSS file
 app.get('/styles.css', (req, res) => {
+  res.setHeader('Content-Type', 'text/css');
   res.sendFile(__dirname + '/styles.css');
 });
 
@@ -1031,7 +1032,12 @@ etc.`;
   }
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Server is running on http://localhost:${PORT}`);
-});
+// Start server (for local development)
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`🚀 Server is running on http://localhost:${PORT}`);
+  });
+}
+
+// Export for Vercel
+module.exports = app;
