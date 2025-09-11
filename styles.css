@@ -105,6 +105,30 @@ body {
   box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
 }
 
+.calendar-btn {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  display: block;
+  text-align: center;
+  margin-top: 10px;
+}
+
+.calendar-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+  color: white;
+  text-decoration: none;
+}
+
 .search-results {
   font-size: 12px;
   color: #666;

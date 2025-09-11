@@ -13,6 +13,9 @@ app.use((err, req, res, next) => {
 // OpenAI configuration
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
+// Webhook configuration
+const WEBHOOK_URL = process.env.WEBHOOK_URL || null;
+
 // Middleware for JSON parsing
 app.use(express.json());
 
@@ -24,7 +27,8 @@ app.get('/health', (req, res) => {
     env: {
       hasSupabaseUrl: !!process.env.SUPABASE_URL,
       hasSupabaseKey: !!process.env.SUPABASE_ANON_KEY,
-      hasOpenAIKey: !!process.env.OPENAI_API_KEY
+      hasOpenAIKey: !!process.env.OPENAI_API_KEY,
+      hasWebhookUrl: !!process.env.WEBHOOK_URL
     }
   });
 });
@@ -39,6 +43,651 @@ app.get('/styles.css', (req, res) => {
 // Redirect root to notes app
 app.get('/', (req, res) => {
   res.redirect('/api/notes');
+});
+
+// Calendar page route
+app.get('/calendar', (req, res) => {
+  res.send(`
+    <html>
+      <head>
+        <title>Calendar - Notes App</title>
+        <link rel="stylesheet" href="/styles.css">
+        <style>
+          .calendar-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          }
+          
+          .calendar-header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+          }
+          
+          .calendar-title {
+            color: white;
+            font-size: 2.5rem;
+            margin: 0 0 10px 0;
+            font-weight: 300;
+          }
+          
+          .calendar-subtitle {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1.1rem;
+            margin: 0;
+          }
+          
+          .navigation {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 20px 0;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+          }
+          
+          .nav-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+          }
+          
+          .nav-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+          }
+          
+          .current-month {
+            color: white;
+            font-size: 1.5rem;
+            font-weight: 500;
+          }
+          
+          .calendar-grid {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            margin-bottom: 30px;
+          }
+          
+          .calendar-table {
+            width: 100%;
+            border-collapse: collapse;
+          }
+          
+          .calendar-table th {
+            color: white;
+            font-weight: 600;
+            padding: 15px;
+            text-align: center;
+            font-size: 1.1rem;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+          }
+          
+          .calendar-table td {
+            padding: 0;
+            text-align: center;
+            vertical-align: top;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            height: 80px;
+            position: relative;
+          }
+          
+          .day-cell {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            padding: 8px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 8px;
+          }
+          
+          .day-cell:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+          }
+          
+          .day-number {
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+          }
+          
+          .today {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            font-weight: bold;
+          }
+          
+          .other-month {
+            opacity: 0.3;
+          }
+          
+          .event-dot {
+            width: 6px;
+            height: 6px;
+            background: #4CAF50;
+            border-radius: 50%;
+            margin: 1px;
+          }
+          
+          .events-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 2px;
+            margin-top: 5px;
+          }
+          
+          .quick-actions {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            text-align: center;
+          }
+          
+          .quick-actions h3 {
+            color: white;
+            margin: 0 0 20px 0;
+            font-size: 1.3rem;
+          }
+          
+          .action-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+          }
+          
+          .action-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+            text-decoration: none;
+            display: inline-block;
+          }
+          
+          .action-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+          }
+          
+          .event-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+          }
+          
+          .event-modal-content {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+          }
+          
+          .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+          }
+          
+          .modal-title {
+            color: #333;
+            font-size: 1.5rem;
+            margin: 0;
+          }
+          
+          .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+          }
+          
+          .form-group {
+            margin-bottom: 20px;
+          }
+          
+          .form-label {
+            display: block;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 8px;
+          }
+          
+          .form-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+          }
+          
+          .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+          }
+          
+          .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+          }
+          
+          .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+          }
+          
+          .attendees-help {
+            margin-top: 5px;
+          }
+          
+          .attendees-help small {
+            color: #666;
+            font-style: italic;
+          }
+          
+          @media (max-width: 768px) {
+            .calendar-container {
+              padding: 10px;
+            }
+            
+            .calendar-header {
+              padding: 20px;
+            }
+            
+            .calendar-title {
+              font-size: 2rem;
+            }
+            
+            .navigation {
+              flex-direction: column;
+              gap: 15px;
+            }
+            
+            .calendar-table td {
+              height: 60px;
+            }
+            
+            .day-cell {
+              padding: 4px;
+            }
+            
+            .day-number {
+              font-size: 0.9rem;
+            }
+            
+            .action-buttons {
+              flex-direction: column;
+              align-items: center;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="calendar-container">
+          <div class="calendar-header">
+            <h1 class="calendar-title">📅 Calendar</h1>
+            <p class="calendar-subtitle">Organize your schedule and events</p>
+          </div>
+          
+          <div class="navigation">
+            <button class="nav-btn" onclick="previousMonth()">← Previous</button>
+            <div class="current-month" id="currentMonth"></div>
+            <button class="nav-btn" onclick="nextMonth()">Next →</button>
+          </div>
+          
+          <div class="calendar-grid">
+            <table class="calendar-table">
+              <thead>
+                <tr>
+                  <th>Sunday</th>
+                  <th>Monday</th>
+                  <th>Tuesday</th>
+                  <th>Wednesday</th>
+                  <th>Thursday</th>
+                  <th>Friday</th>
+                  <th>Saturday</th>
+                </tr>
+              </thead>
+              <tbody id="calendarBody">
+                <!-- Calendar days will be generated here -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        <!-- Event Modal -->
+        <div class="event-modal" id="eventModal">
+          <div class="event-modal-content">
+            <div class="modal-header">
+              <h2 class="modal-title">Add New Event</h2>
+              <button class="close-btn" onclick="closeEventModal()">&times;</button>
+            </div>
+            <form id="eventForm" onsubmit="handleEventSubmit(event)">
+              <div class="form-group">
+                <label class="form-label" for="eventTitle">Event Title</label>
+                <input type="text" id="eventTitle" class="form-input" placeholder="Enter event title..." required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="eventDate">Date</label>
+                <input type="date" id="eventDate" class="form-input" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="eventTime">Time</label>
+                <input type="time" id="eventTime" class="form-input">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="eventDescription">Description</label>
+                <textarea id="eventDescription" class="form-input" rows="3" placeholder="Event description..."></textarea>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="eventAttendees">Attendees (Email Addresses)</label>
+                <textarea id="eventAttendees" class="form-input" rows="2" placeholder="Enter email addresses separated by commas or new lines...&#10;example@email.com, another@email.com&#10;third@email.com"></textarea>
+                <div class="attendees-help">
+                  <small>💡 Tip: Separate multiple email addresses with commas or new lines</small>
+                </div>
+              </div>
+              <button type="submit" class="btn-primary">💾 Save Event</button>
+            </form>
+          </div>
+        </div>
+        
+        <script>
+          let currentDate = new Date();
+          let events = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
+          const WEBHOOK_URL = '${WEBHOOK_URL || ''}';
+          
+          function generateCalendar(year, month) {
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const startDate = new Date(firstDay);
+            startDate.setDate(startDate.getDate() - firstDay.getDay());
+            
+            const calendarBody = document.getElementById('calendarBody');
+            calendarBody.innerHTML = '';
+            
+            const today = new Date();
+            
+            for (let week = 0; week < 6; week++) {
+              const row = document.createElement('tr');
+              
+              for (let day = 0; day < 7; day++) {
+                const cellDate = new Date(startDate);
+                cellDate.setDate(startDate.getDate() + (week * 7) + day);
+                
+                const cell = document.createElement('td');
+                const dayCell = document.createElement('div');
+                dayCell.className = 'day-cell';
+                
+                if (cellDate.getMonth() !== month) {
+                  dayCell.classList.add('other-month');
+                }
+                
+                if (cellDate.toDateString() === today.toDateString()) {
+                  dayCell.classList.add('today');
+                }
+                
+                const dayNumber = document.createElement('div');
+                dayNumber.className = 'day-number';
+                dayNumber.textContent = cellDate.getDate();
+                dayCell.appendChild(dayNumber);
+                
+                // Add events for this day
+                const dayEvents = events.filter(event => {
+                  const eventDate = new Date(event.date);
+                  return eventDate.toDateString() === cellDate.toDateString();
+                });
+                
+                if (dayEvents.length > 0) {
+                  const eventsContainer = document.createElement('div');
+                  eventsContainer.className = 'events-container';
+                  
+                  dayEvents.slice(0, 3).forEach(event => {
+                    const eventDot = document.createElement('div');
+                    eventDot.className = 'event-dot';
+                    eventDot.title = event.title;
+                    eventsContainer.appendChild(eventDot);
+                  });
+                  
+                  if (dayEvents.length > 3) {
+                    const moreDot = document.createElement('div');
+                    moreDot.className = 'event-dot';
+                    moreDot.style.background = '#ff9800';
+                    moreDot.title = '+' + (dayEvents.length - 3) + ' more';
+                    eventsContainer.appendChild(moreDot);
+                  }
+                  
+                  dayCell.appendChild(eventsContainer);
+                }
+                
+                dayCell.onclick = () => selectDate(cellDate);
+                cell.appendChild(dayCell);
+                row.appendChild(cell);
+              }
+              
+              calendarBody.appendChild(row);
+            }
+            
+            // Update month display
+            const monthNames = [
+              'January', 'February', 'March', 'April', 'May', 'June',
+              'July', 'August', 'September', 'October', 'November', 'December'
+            ];
+            document.getElementById('currentMonth').textContent = 
+              monthNames[month] + ' ' + year;
+          }
+          
+          function previousMonth() {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+            generateCalendar(currentDate.getFullYear(), currentDate.getMonth());
+          }
+          
+          function nextMonth() {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            generateCalendar(currentDate.getFullYear(), currentDate.getMonth());
+          }
+          
+          function goToToday() {
+            currentDate = new Date();
+            generateCalendar(currentDate.getFullYear(), currentDate.getMonth());
+          }
+          
+          function selectDate(date) {
+            const dateStr = date.toISOString().split('T')[0];
+            document.getElementById('eventDate').value = dateStr;
+            showEventModal();
+          }
+          
+          function showEventModal() {
+            document.getElementById('eventModal').style.display = 'flex';
+            document.getElementById('eventTitle').focus();
+          }
+          
+          function closeEventModal() {
+            document.getElementById('eventModal').style.display = 'none';
+            document.getElementById('eventForm').reset();
+          }
+          
+          async function handleEventSubmit(e) {
+            e.preventDefault();
+            
+            const title = document.getElementById('eventTitle').value;
+            const date = document.getElementById('eventDate').value;
+            const time = document.getElementById('eventTime').value;
+            const description = document.getElementById('eventDescription').value;
+            const attendeesRaw = document.getElementById('eventAttendees').value;
+            
+            // Process attendees - split by commas or newlines and clean up
+            const attendees = attendeesRaw
+              .split(/[,\\\\n]/)
+              .map(email => email.trim())
+              .filter(email => email.length > 0);
+            
+            const eventData = {
+              id: Date.now(),
+              title,
+              date,
+              time,
+              description,
+              attendees,
+              created: new Date().toISOString()
+            };
+            
+            // Always save to localStorage first
+            events.push(eventData);
+            localStorage.setItem('calendarEvents', JSON.stringify(events));
+            
+            // Try to send to webhook if configured
+            if (WEBHOOK_URL && WEBHOOK_URL.trim() !== '') {
+              try {
+                const response = await fetch(WEBHOOK_URL, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify(eventData)
+                });
+                
+                if (response.ok) {
+                  closeEventModal();
+                  generateCalendar(currentDate.getFullYear(), currentDate.getMonth());
+                  
+                  let message = 'Event saved and sent to webhook successfully! 🎉';
+                  if (attendees.length > 0) {
+                    message += '\\\\n\\\\nAttendees (' + attendees.length + '): ' + attendees.join(', ');
+                  }
+                  alert(message);
+                  return;
+                } else {
+                  throw new Error(\`Webhook request failed with status: \$\{response.status}\`);
+                }
+              } catch (error) {
+                console.error('Error sending event to webhook:', error);
+                
+                closeEventModal();
+                generateCalendar(currentDate.getFullYear(), currentDate.getMonth());
+                
+                alert('Event saved locally, but failed to send to webhook: ' + error.message);
+                return;
+              }
+            } else {
+              // No webhook configured, just save locally
+              closeEventModal();
+              generateCalendar(currentDate.getFullYear(), currentDate.getMonth());
+              
+              let message = 'Event saved locally! 💾';
+              if (attendees.length > 0) {
+                message += '\\\\n\\\\nAttendees (' + attendees.length + '): ' + attendees.join(', ');
+              }
+              message += '\\\\n\\\\nNote: No webhook URL configured. Set WEBHOOK_URL environment variable to enable webhook integration.';
+              alert(message);
+            }
+          }
+          
+          function showUpcomingEvents() {
+            const today = new Date();
+            const upcoming = events.filter(event => {
+              const eventDate = new Date(event.date);
+              return eventDate >= today;
+            }).sort((a, b) => new Date(a.date) - new Date(b.date));
+            
+            if (upcoming.length === 0) {
+              alert('No upcoming events scheduled.');
+              return;
+            }
+            
+            let message = 'Upcoming Events:\\\\n\\\\n';
+            upcoming.slice(0, 5).forEach(event => {
+              const eventDate = new Date(event.date);
+              const dateStr = eventDate.toLocaleDateString();
+              message += '📅 ' + event.title + '\\\\n   ' + dateStr;
+              if (event.time) message += ' at ' + event.time;
+              if (event.attendees && event.attendees.length > 0) {
+                message += '\\\\n   👥 Attendees (' + event.attendees.length + '): ' + event.attendees.join(', ');
+              }
+              message += '\\\\n\\\\n';
+            });
+            
+            if (upcoming.length > 5) {
+              message += '... and ' + (upcoming.length - 5) + ' more events';
+            }
+            
+            alert(message);
+          }
+          
+          // Close modal when clicking outside
+          document.getElementById('eventModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+              closeEventModal();
+            }
+          });
+          
+          // Close modal with Escape key
+          document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+              closeEventModal();
+            }
+          });
+          
+          // Initialize calendar
+          generateCalendar(currentDate.getFullYear(), currentDate.getMonth());
+        </script>
+      </body>
+    </html>
+  `);
 });
 
 // API Routes for Notes
@@ -80,6 +729,7 @@ app.get('/api/notes', async (req, res) => {
                 <button class="clear-search" id="clearSearch" onclick="clearSearch()">×</button>
               </div>
               <button class="add-note-btn" onclick="showAddNoteForm()">+ Add New Note</button>
+              <a href="/calendar" class="calendar-btn">📅 Calendar</a>
               <div class="search-results" id="searchResults"></div>
             </div>
             <div id="notesContainer">
@@ -460,7 +1110,7 @@ app.get('/api/notes', async (req, res) => {
                 } else if (resultCount === 1) {
                   searchResults.textContent = '1 note found';
                 } else {
-                  searchResults.textContent = \`\${resultCount} notes found\`;
+                  searchResults.textContent = \`\$\{resultCount} notes found\`;
                 }
               }
               
@@ -477,18 +1127,18 @@ app.get('/api/notes', async (req, res) => {
               } else {
                 container.innerHTML = filteredNotes.map((note, index) => {
                   return \`
-                    <div class="note-item \${index === 0 ? 'active' : ''}" onclick="showNote('\${note.note_id}')" data-note-id="\${note.note_id}">
+                    <div class="note-item \$\{index === 0 ? 'active' : ''}" onclick="showNote('\$\{note.note_id}')" data-note-id="\$\{note.note_id}">
                       <div class="note-actions">
-                        <button class="action-btn edit-btn" onclick="editNote('\${note.note_id}', event)" title="Edit note">
+                        <button class="action-btn edit-btn" onclick="editNote('\$\{note.note_id}', event)" title="Edit note">
                           ✏️
                         </button>
-                        <button class="action-btn delete-btn" onclick="confirmDelete('\${note.note_id}', '\${escapeHtml(note.title)}', event)" title="Delete note">
+                        <button class="action-btn delete-btn" onclick="confirmDelete('\$\{note.note_id}', '\$\{escapeHtml(note.title)}', event)" title="Delete note">
                           🗑️
                         </button>
                       </div>
-                      <div class="note-title">\${escapeHtml(note.title)}</div>
-                      <div class="note-date">\${formatDate(note.date_created)}</div>
-                      <div class="note-preview">\${escapeHtml(note.content || '').substring(0, 80)}\${(note.content || '').length > 80 ? '...' : ''}</div>
+                      <div class="note-title">\$\{escapeHtml(note.title)}</div>
+                      <div class="note-date">\$\{formatDate(note.date_created)}</div>
+                      <div class="note-preview">\$\{escapeHtml(note.content || '').substring(0, 80)}\$\{(note.content || '').length > 80 ? '...' : ''}</div>
                     </div>
                   \`;
                 }).join('');
@@ -546,7 +1196,7 @@ app.get('/api/notes', async (req, res) => {
               deleteBtn.disabled = true;
               
               try {
-                const response = await fetch(\`/api/notes/\${noteToDelete}\`, {
+                const response = await fetch(\`/api/notes/\$\{noteToDelete}\`, {
                   method: 'DELETE'
                 });
                 
@@ -652,7 +1302,7 @@ app.get('/api/notes', async (req, res) => {
               updateBtn.disabled = true;
               
               try {
-                const response = await fetch(\`/api/notes/\${noteToEdit}\`, {
+                const response = await fetch(\`/api/notes/\$\{noteToEdit}\`, {
                   method: 'PUT',
                   headers: {
                     'Content-Type': 'application/json',

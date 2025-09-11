@@ -57,6 +57,7 @@ A modern, full-featured notes application built with Express.js, Supabase, and O
    SUPABASE_URL=your_supabase_project_url
    SUPABASE_ANON_KEY=your_supabase_anon_key
    OPENAI_API_KEY=your_openai_api_key
+   WEBHOOK_URL=http://localhost:5678/webhook/your-webhook-id
    PORT=3000
    ```
 
@@ -101,6 +102,14 @@ CREATE TABLE notes (
 1. Get an API key from [OpenAI Platform](https://platform.openai.com/api-keys)
 2. Add it to your `.env` file
 3. The app uses GPT-3.5-turbo for action generation
+
+### Webhook Setup (Optional)
+1. Set `WEBHOOK_URL` in your `.env` file to enable webhook integration
+2. Calendar events will be sent to the specified webhook URL
+3. If no webhook URL is configured, events are saved locally only
+4. Example webhook URLs:
+   - Local n8n: `http://localhost:5678/webhook/your-webhook-id`
+   - Cloud n8n: `https://your-n8n-instance.com/webhook/your-webhook-id`
 
 ## 📱 Usage
 
